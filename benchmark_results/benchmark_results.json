@@ -1,0 +1,188 @@
+{
+  "benchmark_config": {
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4070 SUPER",
+    "num_test_frames": 50,
+    "input_size": 640
+  },
+  "rtx4070_results": {
+    "yolov8n.pt": {
+      "model": "yolov8n.pt",
+      "params_millions": 3.16,
+      "model_size_mb": 12.6,
+      "device": "cuda",
+      "num_frames": 50,
+      "mean_latency_ms": 19.63,
+      "median_latency_ms": 19.38,
+      "p95_latency_ms": 23.15,
+      "p99_latency_ms": 23.88,
+      "min_latency_ms": 15.79,
+      "max_latency_ms": 24.22,
+      "fps": 50.9,
+      "avg_detections_per_frame": 4.7,
+      "gpu_memory_mb": 25.9,
+      "classes_detected": {
+        "car": 130,
+        "person": 41,
+        "truck": 36,
+        "motorcycle": 12,
+        "bus": 11,
+        "umbrella": 3,
+        "surfboard": 1,
+        "stop sign": 1,
+        "traffic light": 1
+      },
+      "total_objects_detected": 236
+    },
+    "yolov8s.pt": {
+      "model": "yolov8s.pt",
+      "params_millions": 11.17,
+      "model_size_mb": 44.7,
+      "device": "cuda",
+      "num_frames": 50,
+      "mean_latency_ms": 13.48,
+      "median_latency_ms": 12.8,
+      "p95_latency_ms": 17.36,
+      "p99_latency_ms": 21.43,
+      "min_latency_ms": 10.76,
+      "max_latency_ms": 25.0,
+      "fps": 74.2,
+      "avg_detections_per_frame": 6.4,
+      "gpu_memory_mb": 79.9,
+      "classes_detected": {
+        "car": 164,
+        "person": 54,
+        "truck": 47,
+        "motorcycle": 35,
+        "bus": 15,
+        "traffic light": 3,
+        "dog": 1,
+        "backpack": 1,
+        "umbrella": 1,
+        "train": 1
+      },
+      "total_objects_detected": 322
+    },
+    "yolov10n.pt": {
+      "model": "yolov10n.pt",
+      "params_millions": 2.78,
+      "model_size_mb": 11.1,
+      "device": "cuda",
+      "num_frames": 50,
+      "mean_latency_ms": 13.73,
+      "median_latency_ms": 13.45,
+      "p95_latency_ms": 15.96,
+      "p99_latency_ms": 17.18,
+      "min_latency_ms": 11.84,
+      "max_latency_ms": 17.88,
+      "fps": 72.8,
+      "avg_detections_per_frame": 3.7,
+      "gpu_memory_mb": 68.5,
+      "classes_detected": {
+        "car": 104,
+        "person": 30,
+        "truck": 27,
+        "motorcycle": 14,
+        "bus": 7,
+        "dog": 1,
+        "boat": 1,
+        "umbrella": 1
+      },
+      "total_objects_detected": 185
+    },
+    "yolo11n.pt": {
+      "model": "yolo11n.pt",
+      "params_millions": 2.62,
+      "model_size_mb": 10.5,
+      "device": "cuda",
+      "num_frames": 50,
+      "mean_latency_ms": 14.46,
+      "median_latency_ms": 14.28,
+      "p95_latency_ms": 16.53,
+      "p99_latency_ms": 19.2,
+      "min_latency_ms": 12.42,
+      "max_latency_ms": 19.4,
+      "fps": 69.1,
+      "avg_detections_per_frame": 5.1,
+      "gpu_memory_mb": 79.0,
+      "classes_detected": {
+        "car": 147,
+        "truck": 37,
+        "person": 29,
+        "bus": 22,
+        "motorcycle": 13,
+        "traffic light": 3,
+        "boat": 1,
+        "dog": 1,
+        "stop sign": 1
+      },
+      "total_objects_detected": 254
+    },
+    "yolo11s.pt": {
+      "model": "yolo11s.pt",
+      "params_millions": 9.46,
+      "model_size_mb": 37.8,
+      "device": "cuda",
+      "num_frames": 50,
+      "mean_latency_ms": 14.29,
+      "median_latency_ms": 13.98,
+      "p95_latency_ms": 17.27,
+      "p99_latency_ms": 19.46,
+      "min_latency_ms": 11.65,
+      "max_latency_ms": 20.61,
+      "fps": 70.0,
+      "avg_detections_per_frame": 6.3,
+      "gpu_memory_mb": 126.6,
+      "classes_detected": {
+        "car": 151,
+        "person": 54,
+        "truck": 48,
+        "motorcycle": 32,
+        "bus": 10,
+        "train": 5,
+        "traffic light": 4,
+        "boat": 3,
+        "airplane": 2,
+        "umbrella": 2,
+        "bowl": 1,
+        "dog": 1,
+        "chair": 1,
+        "fire hydrant": 1,
+        "backpack": 1
+      },
+      "total_objects_detected": 316
+    }
+  },
+  "jetson_estimates": {
+    "yolov8n.pt": {
+      "estimated_latency_ms": 77.5,
+      "estimated_fps": 12.9,
+      "estimated_latency_trt_int8_ms": 38.8,
+      "estimated_fps_trt_int8": 25.8
+    },
+    "yolov8s.pt": {
+      "estimated_latency_ms": 51.2,
+      "estimated_fps": 19.5,
+      "estimated_latency_trt_int8_ms": 25.6,
+      "estimated_fps_trt_int8": 39.1
+    },
+    "yolov10n.pt": {
+      "estimated_latency_ms": 53.8,
+      "estimated_fps": 18.6,
+      "estimated_latency_trt_int8_ms": 26.9,
+      "estimated_fps_trt_int8": 37.2
+    },
+    "yolo11n.pt": {
+      "estimated_latency_ms": 57.1,
+      "estimated_fps": 17.5,
+      "estimated_latency_trt_int8_ms": 28.6,
+      "estimated_fps_trt_int8": 35.0
+    },
+    "yolo11s.pt": {
+      "estimated_latency_ms": 55.9,
+      "estimated_fps": 17.9,
+      "estimated_latency_trt_int8_ms": 28.0,
+      "estimated_fps_trt_int8": 35.8
+    }
+  }
+}

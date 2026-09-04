@@ -1,0 +1,44 @@
+# Large archives and datasets
+*.tar.gz
+*.tar
+*.zip
+*.rar
+*.7z
+
+# Raw Video Directories & Extracted Datasets
+Towards Home*/
+Towards Karjat*/
+idd-20k-II/
+idd-segmentation/
+extracted_frames/
+unified_dataset/
+seg_dataset/
+
+# Model weights and engine files
+*.pt
+*.onnx
+*.engine
+
+# Training checkpoints and benchmark runs
+runs/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.log
