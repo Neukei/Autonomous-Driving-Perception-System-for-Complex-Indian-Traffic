@@ -21,8 +21,9 @@ An end-to-end, edge-optimized autonomous driving perception and sensor fusion pi
   - Automated labeling via YOLO pseudo-labeling (`auto_annotator.py`) and diversity frame sampling (`diverse_frame_sampler.py`).
 
 - **Object Detection & Semantic Segmentation**:
-  - NMS-free object detection leveraging **YOLOv10n** for low-latency edge inference.
-  - High-precision semantic segmentation using **YOLO11n-seg** for pixel-level drivable surface mapping (94.4% mAP@50 for road segmentation).
+  - **YOLO11s (Flagship Detector)**: Custom-trained on 21,000+ unified Indian driving frames and synthetic weather augmentations, delivering **40.5% overall mAP@50** (+18.8% improvement over nano baselines), **61.5% mAP on auto-rickshaws**, and a **+292% gain on traffic lights**.
+  - **YOLOv10n (Ultra-Lightweight Baseline)**: NMS-free object detection for minimal CPU latency on edge ARM cores.
+  - **YOLO11n-seg (Semantic Segmentation)**: High-precision polygon segmentation mapping drivable surfaces with **94.4% mAP@50 on road areas**.
 
 - **Multi-Model Edge Benchmarking & TensorRT Compilation**:
   - Comprehensive benchmarking suite (`run_model_benchmark.py`) comparing YOLOv8, YOLOv10, and YOLO11 across FPS, latency, and memory footprints.
@@ -116,13 +117,25 @@ python sensor_fusion.py
 
 ## Performance Summary
 
-| Task | Model | Key Target | Validation Result |
+| Task | Model | Key Target / Highlight | Validation Result |
 |---|---|---|---|
-| **Semantic Segmentation** | YOLO11n-seg | Road Surface | **94.4% mAP@50** |
-| **Object Detection** | YOLOv10n | Auto-rickshaw | **55.9% mAP@50** |
-| **Edge Optimization** | TensorRT FP16 | Jetson Orin Nano | **30+ FPS (Real-Time)** |
+| **Object Detection (Flagship)** | **YOLO11s (Small)** | Overall mAP@50 (All Indian traffic classes) | **40.5% mAP@50** (+18.8% ↑) |
+| **Object Detection (Edge Base)** | **YOLOv10n (Nano)** | NMS-free ARM-optimized detection | **34.1% mAP@50** (55.9% Auto-rickshaw) |
+| **Semantic Segmentation** | **YOLO11n-seg** | Road / Drivable Surface mapping | **94.4% mAP@50** |
+| **Edge Optimization** | **TensorRT FP16** | Jetson Orin Nano with EfficientNMS | **30+ FPS (Real-Time)** |
 
-Detailed evaluations and comparison breakdowns are available in [`metrics_and_results/`](metrics_and_results/FINAL_PERFORMANCE_METRICS.md).
+### YOLO11s vs YOLOv10n Detection Comparison
+
+| Class | YOLOv10n (Nano) | YOLO11s (Small) | Improvement |
+|:---|:---:|:---:|:---:|
+| **Auto-rickshaw** | 55.9% | **61.5%** | **+10.0% ↑** |
+| **Car** | 53.3% | **58.5%** | **+9.8% ↑** |
+| **Motorcycle** | 51.8% | **57.1%** | **+10.2% ↑** |
+| **Bus / Truck** | ~41.0% | **~48.3%** | **+17.8% ↑** |
+| **Traffic Light** | 3.9% | **15.3%** | **+292.3% ↑** |
+| **Overall (mAP@50)** | 34.1% | **40.5%** | **+18.8% ↑** |
+
+Detailed evaluations and comparison breakdowns are available in [`metrics_and_results/`](metrics_and_results/FINAL_PERFORMANCE_METRICS.md) and [`YOLO11s_vs_YOLOv10n_COMPARISON.md`](metrics_and_results/YOLO11s_vs_YOLOv10n_COMPARISON.md).
 
 ---
 
