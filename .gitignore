@@ -13,11 +13,18 @@ idd-segmentation/
 extracted_frames/
 unified_dataset/
 seg_dataset/
+ablation_no_weather/
+
+# Media recordings and large video files
+metrics_and_results/*.mp4
+metrics_and_results/recordings/
+metrics_and_results/snapshots/
 
 # Model weights and engine files
 *.pt
 *.onnx
 *.engine
+models_inventory/yolo26n_best/
 
 # Training checkpoints and benchmark runs
 runs/

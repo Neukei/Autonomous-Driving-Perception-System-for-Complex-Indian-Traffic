@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DREIVE // Edge ADAS Autonomous Command Station</title>
+    <!-- Tailwind CSS, FontAwesome, Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        
+        :root {
+            --bg-deep: #080d1a;
+            --panel-glass: rgba(14, 22, 38, 0.72);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --cyan-accent: #06b6d4;
+            --cyan-glow: rgba(6, 182, 212, 0.35);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: #f1f5f9;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(14, 116, 144, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(30, 58, 138, 0.20) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Refined Translucent Frosted Glass */
+        .glass {
+            background: var(--panel-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.45);
+        }
+
+        .glass-sub {
+            background: rgba(10, 16, 29, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #38bdf8;
+            box-shadow: 0 0 10px #38bdf8;
+        }
+
+        /* Flow Pipeline Node */
+        .pipeline-node {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            transition: all 0.3s ease;
+        }
+        .pipeline-node.active-node {
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+        }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(10, 15, 25, 0.8); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+    <!-- Top Navigation Header -->
+    <header class="h-16 border-b border-slate-800/80 glass px-6 flex items-center justify-between sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-black text-black text-lg shadow-lg shadow-cyan-500/25">
+                D
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-base tracking-wide text-white">DREIVE ADAS</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-semibold mono">v3.0-AUTONOMOUS</span>
+                </div>
+                <p class="text-[10px] text-slate-400 tracking-wide uppercase">Edge Perception & Real-Time Sensor Fusion</p>
+            </div>
+        </div>
+
+        <!-- Clean Navigation Tabs (Mission Control | Hardware Rig | Pipeline | Benchmarks) -->
+        <nav class="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wider">
+            <button onclick="switchTab('live')" id="nav-live" class="tab-btn active pb-1 text-slate-200 hover:text-cyan-400">
+                <i class="fa-solid fa-desktop mr-1.5"></i>LIVE ADAS COCKPIT
+            </button>
+            <button onclick="switchTab('hardware')" id="nav-hardware" class="tab-btn pb-1 text-slate-400 hover:text-cyan-400">
+                <i class="fa-solid fa-sliders mr-1.5"></i>HARDWARE & CALIBRATION
+            </button>
+            <button onclick="switchTab('pipeline')" id="nav-pipeline" class="tab-btn pb-1 text-slate-400 hover:text-cyan-400">
+                <i class="fa-solid fa-diagram-project mr-1.5"></i>PERCEPTION PIPELINE
+            </button>
+            <button onclick="switchTab('benchmarks')" id="nav-benchmarks" class="tab-btn pb-1 text-slate-400 hover:text-cyan-400">
+                <i class="fa-solid fa-chart-simple mr-1.5"></i>MODEL BENCHMARKS
+            </button>
+        </nav>
+
+        <!-- Right System Badges & Actions -->
+        <div class="flex items-center gap-3 text-xs mono">
+            <button onclick="triggerAutoCalibration()" id="btn-autocal" class="px-3 py-1.5 rounded-lg border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 font-semibold text-[11px] transition flex items-center gap-1.5 shadow-lg shadow-cyan-500/10">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span id="txt-autocal">AUTO-CALIBRATE</span>
+            </button>
+            <button onclick="toggleRecording()" id="btn-rec" class="px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-950/40 text-red-400 hover:bg-red-900/60 font-semibold text-[11px] transition flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                <span id="txt-rec">RECORD</span>
+            </button>
+            <button onclick="toggleEmulation()" id="btn-emu" class="px-3 py-1.5 rounded-lg border border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60 font-semibold text-[11px] transition">
+                JETSON EMU: ON
+            </button>
+        </div>
+    </header>
+
+    <!-- TAB 1: LIVE ADAS COCKPIT -->
+    <div id="tab-content-live" class="tab-page flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] w-full mx-auto">
+        
+        <!-- Left: Primary Stream Viewport (8 Cols) -->
+        <section class="lg:col-span-8 flex flex-col gap-5">
+            
+            <div class="glass rounded-2xl overflow-hidden relative shadow-2xl flex flex-col">
+                <!-- Top Viewport Control Bar -->
+                <div class="h-12 px-5 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between text-xs mono">
+                    <div class="flex items-center gap-3">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span class="font-bold text-slate-100" id="view-mode-title">COMBINED SENSOR FUSION</span>
+                        <span class="text-slate-600">|</span>
+                        <span id="active-source-badge" class="px-2 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-800 text-[11px]">VIDEO REPLAY</span>
+                    </div>
+
+                    <!-- View Selector (Combined | Camera | LiDAR Radar | Split) -->
+                    <div class="flex items-center p-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-semibold">
+                        <button onclick="setViewMode('combined')" id="vbtn-combined" class="px-3 py-1 rounded bg-cyan-600 text-white transition">Combined</button>
+                        <button onclick="setViewMode('camera')" id="vbtn-camera" class="px-3 py-1 rounded text-slate-400 hover:text-white transition">Camera</button>
+                        <button onclick="setViewMode('lidar_radar')" id="vbtn-lidar" class="px-3 py-1 rounded text-slate-400 hover:text-white transition">Radar</button>
+                        <button onclick="setViewMode('split')" id="vbtn-split" class="px-3 py-1 rounded text-slate-400 hover:text-white transition">Split</button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-cyan-400 font-bold" id="live-fps">-- FPS</span>
+                    </div>
+                </div>
+
+                <!-- Live Stream Feed -->
+                <div class="relative bg-black aspect-video flex items-center justify-center overflow-hidden">
+                    <img id="stream-img" src="/video_feed" class="w-full h-full object-contain" alt="Perception Stream">
+                    
+                    <!-- Proximity Collision Banner -->
+                    <div id="critical-hud" class="hidden absolute top-4 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-xl bg-red-600/90 text-white font-black tracking-wider text-sm flex items-center gap-3 uppercase shadow-2xl animate-bounce">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                        <span id="critical-hud-text">EMERGENCY BRAKE // TARGET IN PROXIMITY</span>
+                    </div>
+                </div>
+
+                <!-- Bottom Telemetry Ticker & Layer Toggles -->
+                <div class="h-12 bg-slate-950/70 border-t border-slate-800 px-5 flex items-center justify-between text-xs mono">
+                    <div class="flex items-center gap-6">
+                        <div>
+                            <span class="text-slate-500">INFERENCE LATENCY:</span>
+                            <span id="stat-latency" class="text-slate-200 font-semibold ml-1">-- ms</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500">DETECTED OBSTACLES:</span>
+                            <span id="stat-targets" class="text-cyan-400 font-semibold ml-1">0</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500">CLOSEST RANGE:</span>
+                            <span id="stat-closest" class="text-emerald-400 font-bold ml-1">-- m</span>
+                        </div>
+                    </div>
+
+                    <!-- Layer Toggles -->
+                    <div class="flex items-center gap-2 text-[11px]">
+                        <button onclick="toggleLayer('tracers')" id="toggle-tracers" class="px-2.5 py-1 rounded bg-cyan-950/70 text-cyan-300 border border-cyan-800 flex items-center gap-1">
+                            <i class="fa-solid fa-location-arrow text-[10px]"></i> Tracers
+                        </button>
+                        <button onclick="toggleLayer('segmentation')" id="toggle-seg" class="px-2.5 py-1 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                            <i class="fa-solid fa-road text-[10px]"></i> Road Mask
+                        </button>
+                        <button onclick="toggleLayer('boxes')" id="toggle-boxes" class="px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
+                            <i class="fa-regular fa-square text-[10px]"></i> Boxes
+                        </button>
+                        <button onclick="takeSnapshot()" class="p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white" title="Save Snapshot">
+                            <i class="fa-solid fa-camera"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Latency Waveform Graph -->
+            <div class="glass rounded-2xl p-5 flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <div class="flex items-center gap-2 text-slate-200 font-bold text-xs uppercase">
+                        <i class="fa-solid fa-chart-line text-cyan-400"></i>
+                        <span>Edge Compute FPS Waveform (Sample Window: 30 Frames)</span>
+                    </div>
+                    <span class="mono text-[11px] text-slate-400">Target Threshold: 30.0+ FPS</span>
+                </div>
+                <div class="h-32 w-full">
+                    <canvas id="fpsChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right: Source Controls & Active Radar Tracking (4 Cols) -->
+        <section class="lg:col-span-4 flex flex-col gap-5">
+            
+            <!-- Quick Video/Live Input Feeder -->
+            <div class="glass rounded-2xl p-5 flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                    <h2 class="text-xs font-bold text-white tracking-wider uppercase">INPUT STREAM SELECTOR</h2>
+                    <span id="lidar-status-pill" class="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-400 mono">SIMULATED LIDAR</span>
+                </div>
+
+                <!-- Source Switcher Tabs -->
+                <div class="flex rounded-xl bg-slate-900 p-1 border border-slate-800 text-xs font-semibold">
+                    <button onclick="setSource('video')" id="tab-video" class="flex-1 py-1.5 rounded-lg bg-cyan-600 text-white transition">Prerecorded Video</button>
+                    <button onclick="setSource('live')" id="tab-live" class="flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Live USB Camera</button>
+                </div>
+
+                <!-- Video Selection Dropdown -->
+                <div id="video-ctrl-box" class="space-y-3 text-xs">
+                    <div>
+                        <label class="text-slate-400 block mb-1.5 text-[11px] font-semibold">RECORDED HIGHWAY RUNS</label>
+                        <select id="video-dropdown" onchange="switchVideo(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 text-xs mono">
+                            <option value="">Scanning video runs...</option>
+                        </select>
+                    </div>
+
+                    <!-- Active Model Selection -->
+                    <div>
+                        <label class="text-slate-400 block mb-1.5 text-[11px] font-semibold">ACTIVE OBJECT DETECTOR</label>
+                        <select id="model-dropdown" onchange="switchModel(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500 text-xs mono">
+                            <option value="yolo11s">YOLO11s (40.5% mAP - Unified Indian Dataset)</option>
+                            <option value="yolo26n">YOLO26n (Downloaded Light Weight - 2.57M params)</option>
+                            <option value="yolov10n">YOLOv10n (34.1% mAP - NMS-Free Baseline)</option>
+                        </select>
+                    </div>
+
+                    <!-- Inversion Trim Toggle -->
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-slate-400 text-[11px]">INVERT CAMERA (180° FIX)</span>
+                        <input type="checkbox" id="chk-invert" checked onchange="toggleInvert(this.checked)" class="accent-cyan-500 w-4 h-4 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-Time Hardware Resource Gauges -->
+            <div class="glass rounded-2xl p-5 flex flex-col gap-3">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <h2 class="text-xs font-bold text-white tracking-wider uppercase">JETSON ORIN NANO RESOURCE ALLOCATION</h2>
+                    <span class="mono text-[10px] text-cyan-400">8GB UNIFIED BUS</span>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <div class="flex justify-between text-slate-400 mb-1 mono text-[11px]">
+                            <span>SHARED VRAM USAGE</span>
+                            <span id="stat-vram-text">-- / 5120 MB</span>
+                        </div>
+                        <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                            <div id="bar-vram" class="h-full bg-cyan-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-slate-400 mb-1 mono text-[11px]">
+                            <span>HOST CPU LOAD</span>
+                            <span id="stat-cpu">-- %</span>
+                        </div>
+                        <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden">
+                            <div id="bar-cpu" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Obstacle Target Range Table -->
+            <div class="glass rounded-2xl p-5 flex flex-col gap-3 flex-1 min-h-[260px]">
+                <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <h2 class="text-xs font-bold text-white tracking-wider uppercase">TARGET RANGE & COLLISION STATUS</h2>
+                    <span id="target-count" class="mono text-xs px-2 py-0.5 rounded bg-slate-900 text-cyan-400 border border-slate-800 font-bold">0</span>
+                </div>
+
+                <div class="overflow-y-auto max-h-56 pr-1">
+                    <table class="w-full text-left text-xs mono">
+                        <thead>
+                            <tr class="text-slate-500 border-b border-slate-800/80 text-[10px]">
+                                <th class="pb-2">TRACK ID</th>
+                                <th class="pb-2">CLASS</th>
+                                <th class="pb-2">RANGE</th>
+                                <th class="pb-2 text-right">AEB STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="target-tbody" class="divide-y divide-slate-800/60">
+                            <tr>
+                                <td colspan="4" class="py-6 text-center text-slate-500 text-[11px]">Scanning forward sector...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </div>
+
+    <!-- TAB 2: HARDWARE & SENSOR CALIBRATION (FULLY EDITABLE) -->
+    <div id="tab-content-hardware" class="tab-page hidden flex-1 p-8 max-w-[1920px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left: Editable Camera & LiDAR Hardware Parameters -->
+        <div class="lg:col-span-6 flex flex-col gap-6">
+            <div class="glass rounded-2xl p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-bold text-sm text-white uppercase tracking-wider">OPTICAL CAMERA CONFIGURATION (LOGITECH C930E)</h2>
+                    <span class="text-[10px] text-cyan-400 mono">EDITABLE INTRINSICS</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">CAMERA MODEL</label>
+                        <input type="text" id="cfg-cam-model" value="Logitech C930e" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">HORIZONTAL FOV (°)</label>
+                        <input type="number" step="0.1" id="cfg-cam-hfov" value="82.1" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-cyan-400 mono text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">FRAME WIDTH (PX)</label>
+                        <input type="number" id="cfg-cam-w" value="1280" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">FRAME HEIGHT (PX)</label>
+                        <input type="number" id="cfg-cam-h" value="720" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editable LiDAR Hardware Settings -->
+            <div class="glass rounded-2xl p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h2 class="font-bold text-sm text-white uppercase tracking-wider">SLAMTEC RPLIDAR A1M8 CONFIGURATION</h2>
+                    <span class="text-[10px] text-amber-400 mono">SERIAL / USB</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">COM / TTY PORT</label>
+                        <div class="flex gap-2">
+                            <select id="port-select" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-2 text-slate-200 text-xs mono">
+                                <option value="">Scanning COM ports...</option>
+                            </select>
+                            <button onclick="refreshPorts()" class="px-2.5 py-2 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400"><i class="fa-solid fa-arrows-rotate"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">CONNECTION ACTION</label>
+                        <button onclick="connectLidar()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-semibold transition text-xs">Connect LiDAR</button>
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">MAX SCAN RANGE (M)</label>
+                        <input type="number" step="0.5" id="cfg-lidar-max" value="12.0" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                    </div>
+                    <div>
+                        <label class="text-slate-400 block mb-1 text-[11px]">SAMPLE RATE (HZ)</label>
+                        <input type="number" id="cfg-lidar-hz" value="8000" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white mono text-xs">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Spatial Extrinsic Offsets (Live Editable) -->
+        <div class="lg:col-span-6 flex flex-col gap-6">
+            <div class="glass rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                        <h2 class="font-bold text-sm text-white uppercase tracking-wider">RIGID EXTRINSIC SPATIAL OFFSETS</h2>
+                        <span class="text-[10px] text-emerald-400 mono">CALIBRATION MATRIX</span>
+                    </div>
+
+                    <p class="text-slate-300 text-xs leading-relaxed mb-6">
+                        Compensates for the physical displacement between the interior cabin rearview mirror (Logitech C930e) and the exterior roof mount (Slamtec A1). Adjust parameters below or click <strong class="text-cyan-400">Auto-Calibrate</strong>.
+                    </p>
+
+                    <div class="space-y-4 text-xs">
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>FORWARD LONGITUDINAL OFFSET (ΔY in meters)</span>
+                                <span id="val-ext-dy" class="text-cyan-400 font-bold mono">0.15 m</span>
+                            </div>
+                            <input type="range" min="0.0" max="0.50" step="0.01" value="0.15" id="slider-ext-dy" oninput="updateExtrinsicLive('dy', this.value)" class="w-full accent-cyan-500">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>VERTICAL HEIGHT ELEVATION (ΔZ in meters)</span>
+                                <span id="val-ext-dz" class="text-cyan-400 font-bold mono">0.25 m</span>
+                            </div>
+                            <input type="range" min="0.0" max="0.60" step="0.01" value="0.25" id="slider-ext-dz" oninput="updateExtrinsicLive('dz', this.value)" class="w-full accent-cyan-500">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>LATERAL CENTERLINE OFFSET (ΔX in meters)</span>
+                                <span id="val-ext-dx" class="text-cyan-400 font-bold mono">0.00 m</span>
+                            </div>
+                            <input type="range" min="-0.20" max="0.20" step="0.01" value="0.00" id="slider-ext-dx" oninput="updateExtrinsicLive('dx', this.value)" class="w-full accent-cyan-500">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-slate-400 mb-1">
+                                <span>ROTATIONAL HEADING TRIM (Yaw Trim in degrees)</span>
+                                <span id="val-ext-yaw" class="text-amber-400 font-bold mono">0.00°</span>
+                            </div>
+                            <input type="range" min="-10.0" max="10.0" step="0.1" value="0.0" id="slider-ext-yaw" oninput="updateExtrinsicLive('yaw', this.value)" class="w-full accent-amber-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6 border-t border-slate-800 flex items-center justify-between mt-6">
+                    <button onclick="saveAllConfig()" class="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition">
+                        SAVE CONFIG TO DISK
+                    </button>
+                    <span id="save-cfg-status" class="text-xs text-slate-400 mono">sensor_rig_config.json synced</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: PIPELINE & OPTIMIZATION CONTROLS -->
+    <div id="tab-content-pipeline" class="tab-page hidden flex-1 p-8 max-w-[1920px] w-full mx-auto flex flex-col gap-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="font-bold text-xl text-white tracking-wide">PERCEPTION PIPELINE & OPTIMIZATION CONTROLS</h1>
+                <p class="text-xs text-slate-400 mono">Configure multi-task model scheduling, tracking association, and hardware accelerators</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Optimization 1: Alternating Frame Scheduling -->
+            <div class="glass rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-cyan-950/60 border border-cyan-800 flex items-center justify-center text-cyan-400 text-lg mb-4">
+                        <i class="fa-solid fa-shuffle"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-sm mb-2">FRAME ALTERNATION ENGINE</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Alternates YOLO11s (Detection) and YOLO11n-seg (Road Carpet) on successive frames, preventing GPU compute contention and sustaining 30+ FPS on Jetson Orin Nano.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+                    <span class="text-xs text-slate-400 font-semibold">STATUS</span>
+                    <button onclick="toggleAlternating()" id="btn-pipeline-alt" class="px-3 py-1.5 rounded-lg bg-cyan-600 text-white text-xs font-semibold">ENABLED</button>
+                </div>
+            </div>
+
+            <!-- Optimization 2: GPU EfficientNMS -->
+            <div class="glass rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-indigo-950/60 border border-indigo-800 flex items-center justify-center text-indigo-400 text-lg mb-4">
+                        <i class="fa-solid fa-microchip"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-sm mb-2">GPU TENSORRT EFFICIENTNMS</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Bypasses ARM CPU sequential sorting. NMS candidate boxes and IOU calculations execute across 1024 CUDA Tensor Cores, cutting post-processing latency from 18ms down to 1.2ms.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+                    <span class="text-xs text-slate-400 font-semibold">TENSORRT COMPILED</span>
+                    <span class="text-xs text-emerald-400 font-bold mono">ACTIVE</span>
+                </div>
+            </div>
+
+            <!-- Optimization 3: ByteTrack Multi-Object Association -->
+            <div class="glass rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-800 flex items-center justify-center text-purple-400 text-lg mb-4">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-sm mb-2">BYTETRACK OBJECT ASSOCIATION</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Kalman-filter multi-object tracking preserving persistent IDs across occlusions, preventing erratic target flickering in dense heterogeneous traffic.
+                    </p>
+                </div>
+                <div class="flex items-center justify-between border-t border-slate-800 pt-3">
+                    <span class="text-xs text-slate-400 font-semibold">PERSISTENT MEMORY</span>
+                    <span class="text-xs text-emerald-400 font-bold mono">30 SEC WINDOW</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: MODEL BENCHMARKS & VERIFICATION -->
+    <div id="tab-content-benchmarks" class="tab-page hidden flex-1 p-8 max-w-[1920px] w-full mx-auto flex flex-col gap-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="font-bold text-xl text-white tracking-wide">MODEL BENCHMARKS & OFFLINE VERIFICATION</h1>
+                <p class="text-xs text-slate-400 mono">Evaluated on 21,755 Indian driving images across 11 heterogeneous classes</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass rounded-xl p-5">
+                <span class="text-xs text-cyan-400 font-semibold block mb-1">PRODUCTION DETECTOR</span>
+                <h3 class="font-bold text-white mb-2">YOLO11s Object Core</h3>
+                <div class="space-y-1.5 mono text-xs text-slate-300">
+                    <div class="flex justify-between"><span>Overall mAP@50:</span><span class="text-cyan-400 font-bold">40.5%</span></div>
+                    <div class="flex justify-between"><span>Auto-rickshaw mAP:</span><span class="text-emerald-400 font-bold">61.5%</span></div>
+                    <div class="flex justify-between"><span>Car & Motorcycle:</span><span class="text-white font-bold">58.5% / 57.1%</span></div>
+                    <div class="flex justify-between"><span>Traffic Light Gain:</span><span class="text-amber-400 font-bold">+292.3%</span></div>
+                </div>
+            </div>
+
+            <div class="glass rounded-xl p-5">
+                <span class="text-xs text-emerald-400 font-semibold block mb-1">INSTANCE ROAD SEGMENTATION</span>
+                <h3 class="font-bold text-white mb-2">YOLO11n-seg Drivable Mask</h3>
+                <div class="space-y-1.5 mono text-xs text-slate-300">
+                    <div class="flex justify-between"><span>Drivable Road Mask:</span><span class="text-emerald-400 font-bold">94.4%</span></div>
+                    <div class="flex justify-between"><span>Auto-rickshaw Mask:</span><span class="text-white font-bold">72.2%</span></div>
+                    <div class="flex justify-between"><span>Input Resolution:</span><span class="text-cyan-400 font-bold">480x480</span></div>
+                    <div class="flex justify-between"><span>Frame Rate:</span><span class="text-amber-400 font-bold">45+ FPS</span></div>
+                </div>
+            </div>
+
+            <div class="glass rounded-xl p-5">
+                <span class="text-xs text-purple-400 font-semibold block mb-1">LIGHTWEIGHT EDGE CANDIDATE</span>
+                <h3 class="font-bold text-white mb-2">YOLO26n (Downloaded)</h3>
+                <div class="space-y-1.5 mono text-xs text-slate-300">
+                    <div class="flex justify-between"><span>Parameter Count:</span><span class="text-cyan-400 font-bold">2.57M</span></div>
+                    <div class="flex justify-between"><span>Status:</span><span class="text-emerald-400 font-bold">Installed & Ready</span></div>
+                    <div class="flex justify-between"><span>Edge Latency:</span><span class="text-white font-bold">~12 ms</span></div>
+                    <div class="flex justify-between"><span>Role:</span><span class="text-slate-400">High-FPS Nano Baseline</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-xl p-6">
+            <h3 class="font-bold text-sm text-white mb-4">PER-CLASS DETECTION METRICS (YOLO11s PRODUCTION)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs mono">
+                    <thead>
+                        <tr class="text-slate-500 border-b border-slate-800 text-[11px]">
+                            <th class="pb-2">CLASS NAME</th>
+                            <th class="pb-2">PRECISION</th>
+                            <th class="pb-2">RECALL</th>
+                            <th class="pb-2">mAP@50</th>
+                            <th class="pb-2">mAP@50-95</th>
+                            <th class="pb-2 text-right">SIGNIFICANCE</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/60">
+                        <tr><td class="py-2.5 font-bold text-white">Auto-rickshaw</td><td>81.4%</td><td>55.1%</td><td class="text-cyan-400 font-bold">61.5%</td><td>43.0%</td><td class="text-right text-amber-400">Highest Vehicle Score</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Car</td><td>77.8%</td><td>53.1%</td><td class="text-cyan-400 font-bold">58.5%</td><td>40.8%</td><td class="text-right text-slate-300">Standard Vehicle</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Motorcycle</td><td>74.9%</td><td>52.8%</td><td class="text-cyan-400 font-bold">57.1%</td><td>32.3%</td><td class="text-right text-amber-400">Dense Swarms</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Bus</td><td>65.9%</td><td>45.6%</td><td class="text-cyan-400 font-bold">48.6%</td><td>35.8%</td><td class="text-right text-slate-300">Heavy Transport</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Truck</td><td>66.7%</td><td>43.4%</td><td class="text-cyan-400 font-bold">48.1%</td><td>33.8%</td><td class="text-right text-slate-300">Commercial</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Rider</td><td>75.7%</td><td>43.1%</td><td class="text-cyan-400 font-bold">47.5%</td><td>27.3%</td><td class="text-right text-amber-400">Vulnerable User</td></tr>
+                        <tr><td class="py-2.5 font-bold text-white">Person</td><td>73.7%</td><td>34.9%</td><td class="text-cyan-400 font-bold">40.9%</td><td>23.0%</td><td class="text-right text-red-400 font-bold">Pedestrian Safety</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frontend Interactive Script -->
+    <script>
+        let currentTab = 'live';
+        let emulationActive = true;
+        let alternatingActive = true;
+        let layerTracers = true;
+        let layerSeg = true;
+        let layerBoxes = true;
+        let isRecording = false;
+        let isAutoCalibrating = false;
+        let fpsChart = null;
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`nav-${tabId}`).classList.add('active');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('fpsChart').getContext('2d');
+            fpsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [{
+                        label: 'Edge FPS',
+                        data: Array(30).fill(30),
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.08)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 15,
+                            max: 48,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        x: { display: false }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        async function setViewMode(mode) {
+            const titles = {
+                'combined': 'COMBINED SENSOR FUSION',
+                'camera': 'OPTICAL VISION (CLEAN)',
+                'lidar_radar': '2D POLAR LIDAR RADAR',
+                'split': 'SPLIT VIEW // VISION + RADAR'
+            };
+            document.getElementById('view-mode-title').innerText = titles[mode] || mode.toUpperCase();
+
+            ['combined', 'camera', 'lidar', 'split'].forEach(m => {
+                const b = document.getElementById(`vbtn-${m}`);
+                if (b) {
+                    if (m === mode || (m === 'lidar' && mode === 'lidar_radar')) {
+                        b.className = "px-3 py-1 rounded bg-cyan-600 text-white transition";
+                    } else {
+                        b.className = "px-3 py-1 rounded text-slate-400 hover:text-white transition";
+                    }
+                }
+            });
+
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ view_mode: mode })
+            });
+        }
+
+        async function setSource(mode) {
+            const tabV = document.getElementById('tab-video');
+            const tabL = document.getElementById('tab-live');
+            const badge = document.getElementById('active-source-badge');
+
+            if (mode === 'video') {
+                tabV.className = "flex-1 py-1.5 rounded-lg bg-cyan-600 text-white transition";
+                tabL.className = "flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white transition";
+                badge.innerText = "VIDEO REPLAY";
+                
+                const curVid = document.getElementById('video-dropdown').value;
+                const res = await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ source: 'video', video_path: curVid })
+                });
+                const data = await res.json();
+                if (data.status === 'error') alert(data.message);
+            } else {
+                tabL.className = "flex-1 py-1.5 rounded-lg bg-cyan-600 text-white transition";
+                tabV.className = "flex-1 py-1.5 rounded-lg text-slate-400 hover:text-white transition";
+                badge.innerText = "LIVE USB CAMERA";
+
+                const res = await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ source: 'live', camera_index: 0 })
+                });
+                const data = await res.json();
+                if (data.status === 'error') {
+                    alert(data.message);
+                    // Revert tab to video
+                    setSource('video');
+                }
+            }
+        }
+
+        async function switchVideo(vpath) {
+            if (!vpath) return;
+            const res = await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ source: 'video', video_path: vpath })
+            });
+            const data = await res.json();
+            if (data.status === 'error') alert(data.message);
+        }
+
+        async function switchModel(mname) {
+            const res = await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ model_name: mname })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert(`Loaded model: ${mname.toUpperCase()}`);
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function toggleInvert(isChecked) {
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ invert_camera: isChecked })
+            });
+        }
+
+        async function toggleLayer(layer) {
+            if (layer === 'tracers') {
+                layerTracers = !layerTracers;
+                document.getElementById('toggle-tracers').className = layerTracers 
+                    ? "px-2.5 py-1 rounded bg-cyan-950/70 text-cyan-300 border border-cyan-800 flex items-center gap-1"
+                    : "px-2.5 py-1 rounded bg-slate-900 text-slate-500 border border-slate-800 flex items-center gap-1";
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ show_tracers: layerTracers })
+                });
+            } else if (layer === 'segmentation') {
+                layerSeg = !layerSeg;
+                document.getElementById('toggle-seg').className = layerSeg 
+                    ? "px-2.5 py-1 rounded bg-emerald-950/70 text-emerald-300 border border-emerald-800 flex items-center gap-1"
+                    : "px-2.5 py-1 rounded bg-slate-900 text-slate-500 border border-slate-800 flex items-center gap-1";
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ show_segmentation: layerSeg })
+                });
+            } else if (layer === 'boxes') {
+                layerBoxes = !layerBoxes;
+                document.getElementById('toggle-boxes').className = layerBoxes 
+                    ? "px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1"
+                    : "px-2.5 py-1 rounded bg-slate-900 text-slate-500 border border-slate-800 flex items-center gap-1";
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ show_boxes: layerBoxes })
+                });
+            }
+        }
+
+        async function toggleEmulation() {
+            emulationActive = !emulationActive;
+            const b = document.getElementById('btn-emu');
+            if (emulationActive) {
+                b.innerText = "JETSON EMU: ON";
+                b.className = "px-3 py-1.5 rounded-lg border border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/60 font-semibold text-[11px] transition";
+            } else {
+                b.innerText = "4070 NATIVE";
+                b.className = "px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 font-semibold text-[11px] transition";
+            }
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ emulate_orin: emulationActive })
+            });
+        }
+
+        async function toggleAlternating() {
+            alternatingActive = !alternatingActive;
+            const b = document.getElementById('btn-pipeline-alt');
+            if (alternatingActive) {
+                b.innerText = "ENABLED";
+                b.className = "px-3 py-1.5 rounded-lg bg-cyan-600 text-white text-xs font-semibold";
+            } else {
+                b.innerText = "DISABLED (HEAVY)";
+                b.className = "px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-semibold";
+            }
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ alternate_frames: alternatingActive })
+            });
+        }
+
+        async function triggerAutoCalibration() {
+            const btn = document.getElementById('btn-autocal');
+            const txt = document.getElementById('txt-autocal');
+
+            if (!isAutoCalibrating) {
+                isAutoCalibrating = true;
+                txt.innerText = "COLLECTING (3s)...";
+                btn.className = "px-3 py-1.5 rounded-lg border border-red-500 bg-red-950/80 text-white animate-pulse font-semibold text-[11px] transition flex items-center gap-1.5";
+
+                await fetch('/api/control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ start_auto_calibration: true })
+                });
+
+                setTimeout(async () => {
+                    txt.innerText = "SOLVING...";
+                    const res = await fetch('/api/control', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ solve_auto_calibration: true })
+                    });
+                    const data = await res.json();
+                    
+                    isAutoCalibrating = false;
+                    btn.className = "px-3 py-1.5 rounded-lg border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 font-semibold text-[11px] transition flex items-center gap-1.5";
+                    txt.innerText = "AUTO-CALIBRATE";
+
+                    if (data.success) {
+                        alert(`✨ Calibration Solved!\n\n• Yaw Alignment Trim: ${data.yaw_trim_deg}°\n• Forward Offset (dY): ${data.delta_y_m}m\n• Lateral Offset (dX): ${data.delta_x_m}m\n• Reprojection Residual: ±${data.rms_pixel_error}px\n\nSynced to sensor_rig_config.json`);
+                        loadHardwareConfig();
+                    } else {
+                        alert(data.message || "Could not gather enough points. Make sure vehicles or obstacles are visible in the camera frame!");
+                    }
+                }, 3500);
+            }
+        }
+
+        async function takeSnapshot() {
+            const res = await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ take_snapshot: true })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                alert(`Snapshot saved to metrics_and_results/snapshots/${data.file}`);
+            }
+        }
+
+        async function toggleRecording() {
+            isRecording = !isRecording;
+            const b = document.getElementById('btn-rec');
+            const txt = document.getElementById('txt-rec');
+            
+            const res = await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ recording: isRecording })
+            });
+            const data = await res.json();
+
+            if (data.recording) {
+                txt.innerText = "RECORDING...";
+                b.className = "px-3 py-1.5 rounded-lg border border-red-500 bg-red-600 text-white animate-pulse font-semibold text-[11px] transition flex items-center gap-1.5";
+            } else {
+                txt.innerText = "RECORD";
+                b.className = "px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-950/40 text-red-400 hover:bg-red-900/60 font-semibold text-[11px] transition flex items-center gap-1.5";
+            }
+        }
+
+        // Live Extrinsics Tuning
+        function updateExtrinsicLive(type, val) {
+            if (type === 'dy') document.getElementById('val-ext-dy').innerText = `${parseFloat(val).toFixed(2)} m`;
+            if (type === 'dz') document.getElementById('val-ext-dz').innerText = `${parseFloat(val).toFixed(2)} m`;
+            if (type === 'dx') document.getElementById('val-ext-dx').innerText = `${parseFloat(val).toFixed(2)} m`;
+            if (type === 'yaw') document.getElementById('val-ext-yaw').innerText = `${parseFloat(val).toFixed(2)}°`;
+        }
+
+        async function saveAllConfig() {
+            const cfg = {
+                camera: {
+                    model: document.getElementById('cfg-cam-model').value,
+                    fov_horizontal_deg: parseFloat(document.getElementById('cfg-cam-hfov').value),
+                    resolution_width: parseInt(document.getElementById('cfg-cam-w').value),
+                    resolution_height: parseInt(document.getElementById('cfg-cam-h').value)
+                },
+                lidar: {
+                    range_max_m: parseFloat(document.getElementById('cfg-lidar-max').value),
+                    sample_rate_hz: parseInt(document.getElementById('cfg-lidar-hz').value)
+                },
+                extrinsics: {
+                    delta_y_m: parseFloat(document.getElementById('slider-ext-dy').value),
+                    delta_z_m: parseFloat(document.getElementById('slider-ext-dz').value),
+                    delta_x_m: parseFloat(document.getElementById('slider-ext-dx').value),
+                    yaw_trim_deg: parseFloat(document.getElementById('slider-ext-yaw').value)
+                }
+            };
+
+            const res = await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(cfg)
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                const s = document.getElementById('save-cfg-status');
+                s.innerText = "Saved successfully!";
+                s.className = "text-xs text-emerald-400 mono font-bold";
+                setTimeout(() => { s.innerText = "sensor_rig_config.json synced"; s.className = "text-xs text-slate-400 mono"; }, 3000);
+            }
+        }
+
+        async function loadHardwareConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const cfg = await res.json();
+                
+                if (cfg.camera) {
+                    document.getElementById('cfg-cam-model').value = cfg.camera.model || "Logitech C930e";
+                    document.getElementById('cfg-cam-hfov').value = cfg.camera.fov_horizontal_deg || 82.1;
+                    document.getElementById('cfg-cam-w').value = cfg.camera.resolution_width || 1280;
+                    document.getElementById('cfg-cam-h').value = cfg.camera.resolution_height || 720;
+                }
+                if (cfg.extrinsics) {
+                    document.getElementById('slider-ext-dy').value = cfg.extrinsics.delta_y_m || 0.15;
+                    document.getElementById('val-ext-dy').innerText = `${cfg.extrinsics.delta_y_m || 0.15} m`;
+
+                    document.getElementById('slider-ext-dz').value = cfg.extrinsics.delta_z_m || 0.25;
+                    document.getElementById('val-ext-dz').innerText = `${cfg.extrinsics.delta_z_m || 0.25} m`;
+
+                    document.getElementById('slider-ext-dx').value = cfg.extrinsics.delta_x_m || 0.00;
+                    document.getElementById('val-ext-dx').innerText = `${cfg.extrinsics.delta_x_m || 0.00} m`;
+
+                    document.getElementById('slider-ext-yaw').value = cfg.extrinsics.yaw_trim_deg || 0.0;
+                    document.getElementById('val-ext-yaw').innerText = `${cfg.extrinsics.yaw_trim_deg || 0.0}°`;
+                }
+            } catch (e) {}
+        }
+
+        async function loadVideos() {
+            try {
+                const res = await fetch('/api/videos');
+                const data = await res.json();
+                const sel = document.getElementById('video-dropdown');
+                sel.innerHTML = '';
+                
+                data.videos.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.path;
+                    opt.innerText = `${v.name} (${v.size_mb} MB)`;
+                    if (v.path === data.current_video) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            } catch (err) {}
+        }
+
+        async function refreshPorts() {
+            try {
+                const res = await fetch('/api/ports');
+                const data = await res.json();
+                const select = document.getElementById('port-select');
+                select.innerHTML = '';
+                
+                if (data.ports.length === 0) {
+                    select.innerHTML = '<option value="">No COM ports detected</option>';
+                    return;
+                }
+
+                data.ports.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.device;
+                    opt.innerText = `${p.device} (${p.description})`;
+                    if (p.device === data.recommended_port) opt.selected = true;
+                    select.appendChild(opt);
+                });
+            } catch (err) {}
+        }
+
+        async function connectLidar() {
+            const port = document.getElementById('port-select').value;
+            const res = await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ connect_lidar: true, port: port })
+            });
+            const data = await res.json();
+            const pill = document.getElementById('lidar-status-pill');
+            if (data.lidar_connected) {
+                pill.innerText = `LIDAR: ${port}`;
+                pill.className = "text-[10px] px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-400 mono font-bold";
+            } else {
+                alert("Could not establish connection on selected port. Retaining simulation ray returns.");
+            }
+        }
+
+        async function fetchTelemetry() {
+            try {
+                const res = await fetch('/api/telemetry');
+                const data = await res.json();
+                
+                if (data.emulated_fps) {
+                    document.getElementById('live-fps').innerText = `${data.emulated_fps} FPS`;
+                    document.getElementById('stat-latency').innerText = `${data.avg_latency_ms} ms`;
+                    document.getElementById('stat-targets').innerText = data.total_detections || 0;
+                    document.getElementById('target-count').innerText = data.total_detections || 0;
+                    
+                    document.getElementById('stat-vram-text').innerText = `${data.reserved_vram_mb} / ${data.vram_cap_mb} MB`;
+                    document.getElementById('bar-vram').style.width = `${Math.min(100, data.vram_util_pct)}%`;
+                    document.getElementById('stat-cpu').innerText = `${data.cpu_usage_pct}%`;
+                    document.getElementById('bar-cpu').style.width = `${data.cpu_usage_pct}%`;
+
+                    if (fpsChart) {
+                        fpsChart.data.datasets[0].data.shift();
+                        fpsChart.data.datasets[0].data.push(data.emulated_fps);
+                        fpsChart.update('none');
+                    }
+
+                    updateTargetTable(data.active_objects || []);
+                }
+            } catch (err) {}
+        }
+
+        function updateTargetTable(objects) {
+            const tbody = document.getElementById('target-tbody');
+            if (!objects || objects.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500 text-[11px]">No obstacles in path</td></tr>`;
+                document.getElementById('stat-closest').innerText = '-- m';
+                document.getElementById('critical-hud').classList.add('hidden');
+                return;
+            }
+
+            let closest = 999;
+            let criticalObject = null;
+            let rowsHtml = '';
+
+            objects.forEach((obj, idx) => {
+                const dist = obj.dist !== null ? obj.dist : '--';
+                if (obj.dist !== null && obj.dist < closest) closest = obj.dist;
+                if (obj.danger === 'CRITICAL') criticalObject = obj;
+
+                let badge = `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">SAFE</span>`;
+                if (obj.danger === 'WARNING') {
+                    badge = `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-950 text-amber-400 border border-amber-800">WARNING</span>`;
+                } else if (obj.danger === 'CRITICAL') {
+                    badge = `<span class="px-2 py-0.5 rounded text-[10px] bg-red-950 text-red-400 border border-red-800 font-bold animate-pulse">CRITICAL</span>`;
+                }
+
+                rowsHtml += `
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="py-2 text-cyan-400 font-bold">#${obj.id || (idx + 1)}</td>
+                        <td class="py-2 text-slate-200 capitalize">${obj.class}</td>
+                        <td class="py-2 font-bold ${obj.danger === 'CRITICAL' ? 'text-red-400' : 'text-slate-300'}">${dist}m</td>
+                        <td class="py-2 text-right">${badge}</td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
+            document.getElementById('stat-closest').innerText = closest !== 999 ? `${closest} m` : '-- m';
+
+            const critHud = document.getElementById('critical-hud');
+            if (criticalObject) {
+                document.getElementById('critical-hud-text').innerText = `EMERGENCY BRAKE // ${criticalObject.class.toUpperCase()} AT ${criticalObject.dist}m`;
+                critHud.classList.remove('hidden');
+            } else {
+                critHud.classList.add('hidden');
+            }
+        }
+
+        window.onload = () => {
+            initChart();
+            loadVideos();
+            refreshPorts();
+            loadHardwareConfig();
+            setInterval(fetchTelemetry, 250);
+        };
+    </script>
+</body>
+</html>

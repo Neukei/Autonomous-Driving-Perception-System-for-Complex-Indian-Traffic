@@ -1,0 +1,29 @@
+{
+    "camera": {
+        "model": "Logitech C930e",
+        "fov_diagonal_deg": 90.0,
+        "fov_horizontal_deg": 82.1,
+        "fov_vertical_deg": 52.2,
+        "resolution_width": 1280,
+        "resolution_height": 720,
+        "fps": 30,
+        "mount_location": "Inside cabin on rearview mirror",
+        "elevation_ground_m": 1.25
+    },
+    "lidar": {
+        "model": "Slamtec RPLiDAR A1M8",
+        "range_min_m": 0.15,
+        "range_max_m": 12.0,
+        "sample_rate_hz": 8000,
+        "scan_frequency_hz": 7.0,
+        "mount_location": "Vehicle roof above windshield",
+        "elevation_ground_m": 1.5
+    },
+    "extrinsics": {
+        "delta_x_m": -0.0,
+        "delta_y_m": 0.0,
+        "delta_z_m": 0.25,
+        "yaw_trim_deg": 0.0,
+        "pitch_trim_deg": 0.0
+    }
+}
